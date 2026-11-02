@@ -40,7 +40,8 @@ Kartın `config` alanı yoktur. Açılıp kapanma ve katlanma durumu genel kart 
 ```text
 cards/spotify/
 ├── __init__.py   # SPEC
-├── card.py       # SpotifyCard: parçaları birleştirir, yoklama, komutlar
+├── card.py       # SpotifyCard: arayüz, zamanlayıcılar, yaşam döngüsü; komutları arka uca iletir
+├── session.py    # PlaybackSession: çalma/ses/çıkış durumu, komutların iyimser etkisi, son şarkı kaydı (Qt'siz)
 ├── controls.py   # ProgressRow, TransportRow, AudioRow: denetim satırları
 ├── state.py      # Hold, CommandHold, PendingVolume: komut sonrası tutma mantığı (Qt'siz)
 ├── backend.py    # SpotifyBackend (Protocol): kartın Windows'tan beklediği arayüz
@@ -56,7 +57,7 @@ cards/spotify/
 ```
 
 **Veri akışı:** `Worker` (COM/WinRT çağrılarının hepsi bu tek iş parçacığında) ->
-`SpotifyBackend.read()` -> `Reading` -> `done` sinyali -> `SpotifyCard._apply` -> arayüz.
+`SpotifyBackend.read()` -> `Reading` -> `done` sinyali -> `PlaybackSession.apply` -> `SpotifyCard._render` -> arayüz.
 Komutlar (oynat, atla, ses...) aynı `Worker` kuyruğuna girer, böylece komuttan sonraki okuma
 yeni durumu görür.
 

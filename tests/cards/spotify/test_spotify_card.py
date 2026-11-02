@@ -4,7 +4,7 @@ from PySide6.QtGui import QColor, QImage
 from PySide6.QtWidgets import QMenu
 
 from pervaz.cards import CARDS
-from pervaz.cards.spotify import SPEC, SpotifyCard, controls
+from pervaz.cards.spotify import SPEC, SpotifyCard, controls, state
 from pervaz.cards.spotify import card as card_module
 from pervaz.cards.spotify.models import (
     AudioOutput,
@@ -241,7 +241,7 @@ def test_play_pause_acts_immediately_and_sends_command(card, clock, wait_call):
     clock.now += 10
     card._toggle_playing()
     assert card._play.text() == controls.PLAY  # Spotify'ı beklemeden
-    assert card._np.position == 93.0  # durunca konum dondurulur
+    assert card._session.now_playing.position == 93.0  # durunca konum dondurulur
     wait_call("playing", False)
 
 
@@ -250,7 +250,7 @@ def test_stale_reading_does_not_undo_a_fresh_command(card, clock):
     card._toggle_playing()
     go_live(card, clock)  # Spotify henüz eski durumu bildiriyor
     assert card._play.text() == controls.PLAY
-    clock.now += card_module.HOLD_SECONDS + 0.1
+    clock.now += state.HOLD_SECONDS + 0.1
     go_live(card, clock)  # süre doldu: Spotify'ın dediği geçerli
     assert card._play.text() == controls.PAUSE
 
@@ -262,8 +262,8 @@ def test_old_command_does_not_leak_into_a_later_one(card, clock):
     go_live(card, clock, playing=True, shuffle=False)
     card._toggle_shuffle()
     # Oynat/duraklat komutunun süresi dolmuştu; ikinci komut onu geri getirmemeli.
-    assert card._np.playing is True
-    assert card._np.shuffle is True
+    assert card._session.now_playing.playing is True
+    assert card._session.now_playing.shuffle is True
 
 
 def test_skip_buttons_send_commands(card, clock, wait_call):
@@ -288,7 +288,7 @@ def test_seek_commit_jumps_and_updates_position(card, clock, wait_call):
     go_live(card, clock)
     card._seek.committed.emit(600)
     wait_call("seek", 60.0)
-    assert card._np.position == 60.0
+    assert card._session.now_playing.position == 60.0
     assert card._elapsed.text() == "1:00"
 
 
@@ -324,7 +324,7 @@ def test_volume_reading_does_not_fight_the_user(card, clock):
     card._volume_slider.setValue(30)
     go_live(card, clock, volume=Volume(1.0, False))  # eski değer geç geliyor
     assert card._volume_slider.value() == 30
-    clock.now += card_module.VOLUME_HOLD_SECONDS + 0.1
+    clock.now += state.VOLUME_HOLD_SECONDS + 0.1
     go_live(card, clock, volume=Volume(0.9, False))
     assert card._volume_slider.value() == 90
 
@@ -371,7 +371,7 @@ def test_output_menu_without_devices(card, backend, qtbot):
 def test_polling_starts_when_shown_and_stops_when_hidden(card, clock, backend, qtbot):
     backend.reading = Reading(playing_track(clock), Volume(0.7, False))
     card.on_show()
-    qtbot.waitUntil(lambda: card._live, timeout=2000)
+    qtbot.waitUntil(lambda: card._session.live, timeout=2000)
     assert card._poll_timer.isActive()
     assert card._tick_timer.isActive()  # çalıyor: çubuk akıyor
     card.on_hide()
@@ -399,7 +399,7 @@ def test_read_failure_shows_error_and_clears_on_recovery(card, clock, backend, q
     backend.reading = Reading(playing_track(clock), Volume(0.7, False))
     card._poll()
     qtbot.waitUntil(lambda: card.current_error == "", timeout=2000)
-    assert card._live
+    assert card._session.live
 
 
 def test_collapsed_card_summarises_track_in_header(card, clock):
@@ -536,7 +536,7 @@ def test_choosing_a_device_updates_it_at_once_and_holds_against_stale_reads(
     assert "Kulaklık" in card._output.toolTip()
     card._apply(Reading(None, None, AudioOutput("a", "Hoparlör", True)))  # eski bilgi geç geliyor
     assert "Kulaklık" in card._output.toolTip()
-    clock.now += card_module.HOLD_SECONDS + 0.1
+    clock.now += state.HOLD_SECONDS + 0.1
     card._apply(Reading(None, None, AudioOutput("b", "Kulaklık", True)))
     assert "Kulaklık" in card._output.toolTip()
     wait_call("output", "b")

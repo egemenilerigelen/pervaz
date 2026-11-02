@@ -4,15 +4,15 @@ Veri Windows'un medya oturumundan gelir (Spotify hesabına bağlanılmaz). Kart,
 saniyede bir okur; çalarken ilerleme çubuğunu aradaki sürede kendisi akıtır. Spotify kapanınca
 son şarkı görünür kalır, düğmeler pasifleşir.
 
-Bu dosya parçaları birleştirir: denetim satırları `controls.py`, komut sonrası tutma mantığı
-`state.py`, arka plan işleri `worker.py` içindedir.
+Bu dosya parçaları birleştirir: denetim satırları `controls.py`, çalma durumu ve komutların
+iyimser etkisi `session.py` (komut sonrası tutma `state.py`), arka plan işleri `worker.py`
+içindedir. Kart yalnızca arayüzü, zamanlayıcıları ve yaşam döngüsünü yönetir.
 """
 
 from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from dataclasses import replace
 from typing import Any
 
 from PySide6.QtCore import QPoint, Qt, QTimer
@@ -30,15 +30,9 @@ from pervaz.cards.spotify.controls import (
 )
 from pervaz.cards.spotify.formatting import summary
 from pervaz.cards.spotify.logo import SpotifyLogo
-from pervaz.cards.spotify.models import AudioOutput, NowPlaying, Reading, Volume
+from pervaz.cards.spotify.models import AudioOutput, Reading
 from pervaz.cards.spotify.palette import DEFAULT, accent_for, extract_palette
-from pervaz.cards.spotify.state import (
-    HOLD_SECONDS,
-    VOLUME_HOLD_SECONDS,
-    CommandHold,
-    Hold,
-    PendingVolume,
-)
+from pervaz.cards.spotify.session import PlaybackSession
 from pervaz.cards.spotify.widgets import CoverView
 from pervaz.cards.spotify.worker import Worker
 from pervaz.core.cards.base import Card, CardContext, CardSpec, guarded
@@ -62,21 +56,10 @@ class SpotifyCard(Card):
     ) -> None:
         super().__init__(context)
         self._backend = backend
-        self._clock = clock
-        self._cache = cache or LastPlayedCache()
-        # Son bilinen şarkı: Spotify kapanınca da, uygulama Spotify kapalıyken açılınca da kalır.
-        self._np: NowPlaying | None = self._cache.load()
-        self._saved_key = self._key(self._np)
-        self._live = False  # Spotify'ın medya oturumu şu an var mı
-        self._volume: Volume | None = None
+        self._session = PlaybackSession(clock, cache or LastPlayedCache())
         self._shown = False
         self._collapsed = False
         self._reading = False
-        self._command_hold = CommandHold(clock, HOLD_SECONDS)
-        self._volume_hold = Hold(clock, VOLUME_HOLD_SECONDS)
-        self._output_info: AudioOutput | None = None  # seçili (varsayılan) çıkış cihazı
-        self._output_hold = Hold(clock, HOLD_SECONDS)
-        self._pending_volume = PendingVolume()
         self._cover_src: bytes | None = None
         self._palette = DEFAULT  # şu anki kapağın renkleri
         self._build_ui()
@@ -195,49 +178,23 @@ class SpotifyCard(Card):
             QTimer.singleShot(RECHECK_MS, self._poll)
 
     def _apply(self, reading: Reading) -> None:
-        np = reading.now_playing
-        if np is None and self._live:
-            self._remember()  # Spotify az önce kapandı: son konum diske yazılsın
-        self._live = np is not None
-        if np is not None:
-            np = self._np = self._command_hold.apply(np)
-            if self._key(np) != self._saved_key:
-                self._remember()
-        if not self._volume_hold.active:
-            self._volume = reading.volume
-        if not self._output_hold.active:
-            self._output_info = reading.output
+        self._session.apply(reading)
         self._render()
-
-    # --- Son şarkı ----------------------------------------------------------
-
-    @staticmethod
-    def _key(np: NowPlaying | None) -> tuple[Any, ...] | None:
-        """Diske yeniden yazmayı gerektiren değişiklikler: şarkı ya da kapağı (geç gelen ya da
-        düzelen kapak dahil) değişti mi."""
-        return None if np is None else (np.track, np.duration, np.cover)
-
-    def _remember(self) -> None:
-        np = self._np
-        if np is None:
-            return
-        position = np.position_at(self._clock()) if self._live else np.position
-        self._saved_key = self._key(np)
-        self._cache.save(replace(np, position=position))
 
     # --- Çizim --------------------------------------------------------------
 
     def _render(self) -> None:
         self._render_track()
-        self._transport.show_state(self._np, self._live)
-        self._audio.show_volume(self._volume)
-        self._audio.show_output(self._output_info)
+        session = self._session
+        self._transport.show_state(session.now_playing, session.live)
+        self._audio.show_volume(session.volume)
+        self._audio.show_output(session.output)
         self._render_progress()
         self._publish_info()
         self._sync_timers()
 
     def _render_track(self) -> None:
-        np = self._np
+        np = self._session.now_playing
         if np is None:
             self._title.set_full_text("Spotify açık değil")
             self._artist.set_full_text("")
@@ -253,22 +210,20 @@ class SpotifyCard(Card):
             self._apply_accent()
 
     def _render_progress(self) -> None:
-        np = self._np
+        np = self._session.now_playing
         if np is None:
             self._progress.clear()
             return
-        position = np.position_at(self._clock()) if self._live else np.position
-        self._progress.show_position(np, position, self._live)
+        self._progress.show_position(np, self._session.position(), self._session.live)
 
     def _publish_info(self) -> None:
-        np = self._np
+        np = self._session.now_playing
         self.set_info(
             summary(np.track.artist, np.track.title) if self._collapsed and np is not None else ""
         )
 
     def _sync_timers(self) -> None:
-        np = self._np
-        ticking = self._shown and self._live and np is not None and np.playing
+        ticking = self._shown and self._session.ticking
         if ticking and not self._tick_timer.isActive():
             self._tick_timer.start()
         elif not ticking and self._tick_timer.isActive():
@@ -276,84 +231,58 @@ class SpotifyCard(Card):
 
     # --- Komutlar -----------------------------------------------------------
 
-    def _send(self, tag: str, job: Callable[[], Any], **intent: Any) -> None:
-        """Komutu arka plana verir ve `intent`teki değişikliği Spotify bildirene kadar
-        ekranda tutar (düğme basıldığı anda tepki versin)."""
-        if intent and self._np is not None:
-            self._command_hold.remember(**intent)
-            self._np = replace(self._np, **intent)
+    def _send(self, tag: str, job: Callable[[], Any], changed: bool = False) -> None:
+        """Komutu arka plana verir; `changed` ise oturumun iyimser değişikliğini hemen çizer
+        (düğme basıldığı anda tepki versin)."""
+        if changed:
             self._render()
         self._worker.submit(tag, job)
 
-    def _controllable(self) -> NowPlaying | None:
-        return self._np if self._live else None
-
     @guarded
     def _toggle_playing(self) -> None:
-        np = self._controllable()
-        if np is None:
-            return
-        playing = not np.playing
-        now = self._clock()
-        self._send(
-            "play",
-            lambda: self._backend.set_playing(playing),
-            playing=playing,
-            position=np.position_at(now),  # durunca konum dondurulur, başlayınca oradan akar
-            taken_at=now,
-        )
+        playing = self._session.toggle_playing()
+        if playing is not None:
+            self._send("play", lambda: self._backend.set_playing(playing), changed=True)
 
     @guarded
     def _skip_next(self) -> None:
-        if self._controllable() is not None:
+        if self._session.controllable() is not None:
             self._send("next", self._backend.next)
 
     @guarded
     def _skip_previous(self) -> None:
-        if self._controllable() is not None:
+        if self._session.controllable() is not None:
             self._send("previous", self._backend.previous)
 
     @guarded
     def _toggle_shuffle(self) -> None:
-        np = self._controllable()
-        if np is not None:
-            enabled = not np.shuffle
-            self._send("shuffle", lambda: self._backend.set_shuffle(enabled), shuffle=enabled)
+        enabled = self._session.toggle_shuffle()
+        if enabled is not None:
+            self._send("shuffle", lambda: self._backend.set_shuffle(enabled), changed=True)
 
     @guarded
     def _cycle_repeat(self) -> None:
-        np = self._controllable()
-        if np is not None:
-            mode = np.repeat.next()
-            self._send("repeat", lambda: self._backend.set_repeat(mode), repeat=mode)
+        mode = self._session.cycle_repeat()
+        if mode is not None:
+            self._send("repeat", lambda: self._backend.set_repeat(mode), changed=True)
 
     @guarded
     def _on_seek(self, value: int) -> None:
-        if self._controllable() is None:
-            return
         seconds = value / SEEK_STEPS
-        self._send(
-            "seek",
-            lambda: self._backend.seek(seconds),
-            position=seconds,
-            taken_at=self._clock(),
-        )
+        if self._session.seek(seconds):
+            self._send("seek", lambda: self._backend.seek(seconds), changed=True)
 
     @guarded
     def _on_volume_moved(self, value: int) -> None:
-        volume = self._volume
+        volume = self._session.drag_volume(value / 100)
         if volume is None:
             return
-        level = value / 100
-        self._pending_volume.update(level, volume.muted)
-        self._volume = Volume(level, False)
-        self._volume_hold.start()
-        self._audio.show_volume(self._volume)
+        self._audio.show_volume(volume)
         self._volume_timer.start()
 
     @guarded
     def _send_volume(self) -> None:
-        pending = self._pending_volume.take()
+        pending = self._session.take_pending_volume()
         if pending is None:
             return
         level, unmute = pending
@@ -367,13 +296,10 @@ class SpotifyCard(Card):
 
     @guarded
     def _toggle_mute(self) -> None:
-        volume = self._volume
-        if volume is None:
+        muted = self._session.toggle_mute()
+        if muted is None:
             return
-        muted = not volume.muted
-        self._volume = Volume(volume.level, muted)
-        self._volume_hold.start()
-        self._audio.show_volume(self._volume)
+        self._audio.show_volume(self._session.volume)
         self._worker.submit("mute", lambda: self._backend.set_muted(muted))
 
     # --- Ses çıkışı ---------------------------------------------------------
@@ -391,10 +317,8 @@ class SpotifyCard(Card):
 
     @guarded
     def _select_output(self, output: AudioOutput) -> None:
-        # Kutucuk hemen yeni cihazı göstersin; Windows'un yeni varsayılanı bildirmesi sürer.
-        self._output_info = replace(output, is_default=True)
-        self._output_hold.start()
-        self._audio.show_output(self._output_info)
+        self._session.select_output(output)
+        self._audio.show_output(self._session.output)
         self._worker.submit("output", lambda: self._backend.set_output(output.id))
 
     # --- Yaşam döngüsü ------------------------------------------------------
@@ -407,8 +331,7 @@ class SpotifyCard(Card):
 
     def on_hide(self) -> None:
         self._shown = False
-        if self._live:
-            self._remember()  # panel kapanınca konum güncellenmez; son konum saklansın
+        self._session.remember_if_live()
         self._poll_timer.stop()
         self._tick_timer.stop()
 
@@ -417,8 +340,7 @@ class SpotifyCard(Card):
         self._publish_info()
 
     def shutdown(self) -> None:
-        if self._live:
-            self._remember()
+        self._session.remember_if_live()
         self._shown = False
         for timer in (self._poll_timer, self._tick_timer, self._volume_timer):
             timer.stop()
