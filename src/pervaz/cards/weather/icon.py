@@ -14,6 +14,7 @@ from PySide6.QtGui import QColor, QPainter, QPainterPath, QPainterPathStroker, Q
 from PySide6.QtWidgets import QWidget
 
 from pervaz.cards.weather import api
+from pervaz.theme.tokens import DARK
 
 
 def _pen(color: QColor, width: float) -> QPen:
@@ -29,8 +30,8 @@ class WeatherIcon(QWidget):
         super().__init__(parent)
         self.setFixedSize(size, size)
         self._kind = api.KIND_CLOUDY
-        self._color = QColor("#cdc072")
-        self._soft = QColor("#bdb5a4")
+        self._color = QColor(DARK.accent)
+        self._soft = QColor(DARK.text_soft)
 
     def set_kind(self, kind: str) -> None:
         self._kind = kind

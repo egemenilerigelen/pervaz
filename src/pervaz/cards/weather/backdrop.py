@@ -23,20 +23,12 @@ from PySide6.QtWidgets import QFrame, QWidget
 
 from pervaz.cards.weather import api
 from pervaz.theme import Look
+from pervaz.theme.tokens import WEATHER_TINTS
 
 MAX_ALPHA = 0.15  # renk katmanlarının üst sınırı (testle korunur)
 GRAIN_ALPHA = 0.05  # tane/desen çizgilerinin üst sınırı
 
-# Havaya göre (ana ton, ikinci ton).
-TINTS: dict[str, tuple[str, str]] = {
-    api.KIND_CLEAR: ("#e8a935", "#d9742f"),
-    api.KIND_PARTLY: ("#e8b955", "#7f98b5"),
-    api.KIND_CLOUDY: ("#8a9bb0", "#5f6f85"),
-    api.KIND_FOG: ("#98a4b0", "#7a8694"),
-    api.KIND_RAIN: ("#4f86c6", "#3a5f94"),
-    api.KIND_SNOW: ("#7fb0d8", "#5f93c0"),
-    api.KIND_STORM: ("#7b6ad8", "#f0c040"),
-}
+TINTS = WEATHER_TINTS  # havaya göre (ana ton, ikinci ton)
 
 
 def _color(hex_color: str, alpha: float, cap: float = MAX_ALPHA) -> QColor:
