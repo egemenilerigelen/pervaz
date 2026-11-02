@@ -30,7 +30,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QWidget
 
 from pervaz.theme import Look
-from pervaz.theme.tokens import Theme, blend
+from pervaz.theme.tokens import Theme, blend, shade_for
 
 DEPTH = 0.14  # zeminin alt kenarındaki derinleşme oranı
 GRAIN_MAX_ALPHA = 0.06  # tane noktalarının en yüksek alfası
@@ -75,8 +75,7 @@ def render_surface(theme: Theme, width: int, height: int, ratio: float = 1.0) ->
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-    # Metin renginin tersi: koyu temada siyah, açık temada beyaz.
-    shade = "#000000" if theme.ink.lower() == "#ffffff" else "#ffffff"
+    shade = shade_for(theme.ink)
 
     # 1) Zemin: ayarlardaki saydamlıkla boyanır, aşağı doğru derinleşir.
     base = QLinearGradient(QPointF(0, 0), QPointF(0, h))

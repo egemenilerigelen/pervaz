@@ -6,13 +6,13 @@ nesne adını bilir; renk ve boyut kararları burada, tek yerde verilir.
 
 from __future__ import annotations
 
-from pervaz.theme.tokens import ICON_FONT, SERIES_TONES, UI_FONT, Metrics, Theme, rgba
+from pervaz.theme.tokens import BLACK, ICON_FONT, SERIES_TONES, UI_FONT, Metrics, Theme, rgba
 
 
 def build_stylesheet(theme: Theme, metrics: Metrics) -> str:
     t, m = theme, metrics
     # Üzerine gelince koyulaşan dolgu: koyu temada siyah, açık temada koyu mürekkep.
-    shade = rgba("#000000", 0.30) if t.name == "dark" else rgba(t.ink, 0.12)
+    shade = rgba(BLACK, 0.30) if t.name == "dark" else rgba(t.ink, 0.12)
     tones = "\n".join(
         f'QLabel[role="metric"][tone="{tone}"] {{ color: {t.tone_color(tone)}; }}'
         for tone in (*SERIES_TONES, "accent", "warn", "down")

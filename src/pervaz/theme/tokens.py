@@ -16,6 +16,22 @@ ICON_FONT = "Segoe MDL2 Assets"
 # Sayısal göstergelerin (telemetri) sabit renk adları; `Theme.series` bu sırayla renk verir.
 SERIES_TONES = ("blue", "cyan", "violet", "green")
 
+BLACK, WHITE = "#000000", "#ffffff"
+
+# Havaya göre (ana ton, ikinci ton). Anahtarlar `cards.weather.api.KIND_*` değerleridir; renkler
+# temaya göre kaymaz, çünkü arka plan yalnızca atmosfer verir.
+WEATHER_TINTS: dict[str, tuple[str, str]] = {
+    "clear": ("#e8a935", "#d9742f"),
+    "partly": ("#e8b955", "#7f98b5"),
+    "cloudy": ("#8a9bb0", "#5f6f85"),
+    "fog": ("#98a4b0", "#7a8694"),
+    "rain": ("#4f86c6", "#3a5f94"),
+    "snow": ("#7fb0d8", "#5f93c0"),
+    "storm": ("#7b6ad8", "#f0c040"),
+}
+# Spotify kapağı yokken: referanstaki zeytin-yeşil tonları (ana ton, ikinci ton).
+COVERLESS_TONES = ("#b8b330", "#5aa63a")
+
 
 def parse_hex(color: str) -> tuple[int, int, int]:
     return int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
@@ -34,6 +50,11 @@ def blend(foreground: str, background: str, alpha: float) -> str:
         for f, b in zip(parse_hex(foreground), parse_hex(background), strict=True)
     )
     return "#{:02x}{:02x}{:02x}".format(*mixed)
+
+
+def shade_for(ink: str) -> str:
+    """Metin renginin tersi: koyu temada (beyaz metin) siyah, açık temada beyaz."""
+    return BLACK if ink.lower() == WHITE else WHITE
 
 
 def _luminance(color: str) -> float:
@@ -109,7 +130,7 @@ DARK = Theme(
     name="dark",
     bg="#15130f",
     glass_opacity=0.92,
-    ink="#ffffff",
+    ink=WHITE,
     surface_alpha=0.06,
     surface_hover_alpha=0.10,
     border_alpha=0.10,
