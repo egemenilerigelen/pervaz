@@ -8,8 +8,10 @@ dynamic = ["version"]
 description = "Ekranın kenarından açılan, kartlardan oluşan modüler Windows paneli"
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
 keywords = ["windows", "pyside6", "desktop-panel", "widget"]
 classifiers = [
+    "License :: OSI Approved :: MIT License",
     "Environment :: Win32 (MS Windows)",
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3.11",
@@ -43,6 +45,8 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/egemenilerigelen/pervaz"
+Documentation = "https://github.com/egemenilerigelen/pervaz/tree/main/docs"
+Issues = "https://github.com/egemenilerigelen/pervaz/issues"
 
 [project.gui-scripts]
 pervaz = "pervaz.app:main"
