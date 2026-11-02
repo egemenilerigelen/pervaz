@@ -1,4 +1,8 @@
-"""Sağ kenarda dikey ortada duran ince tutamaç (pill).
+"""Sağ kenarda duran, ekranın içine göçmüş gibi çizilen koyu kahve tutamaç.
+
+Tutamaç bir çıkıntı değil, kenardaki sığ bir girintidir: uçları kenarda sönerek başlar, ortada en
+derin yerine iner. Panel kara delik efektiyle bu noktadan çıkar ve buraya girer (bkz.
+`core/panel/blackhole.py`).
 
 Yalnızca tutamacın kendi alanı fareyi yakalar; ekranın geri kalan sağ kenarı (ör.
 maksimize bir pencerenin kaydırma çubuğu) etkilenmez. Tamamen olay tabanlıdır.
@@ -6,14 +10,42 @@ maksimize bir pencerenin kaydırma çubuğu) etkilenmez. Tamamen olay tabanlıd�
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QRectF, Qt
-from PySide6.QtGui import QColor, QMouseEvent, QPainter, QScreen
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, Qt
+from PySide6.QtGui import (
+    QColor,
+    QLinearGradient,
+    QMouseEvent,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QScreen,
+)
 from PySide6.QtWidgets import QWidget
 
 from pervaz.core.settings import Settings
 from pervaz.core.trigger.base import Trigger
 from pervaz.theme import Look
-from pervaz.theme.tokens import DARK
+from pervaz.theme.tokens import HOLE
+
+IDLE_OPACITY = 0.8  # dikkat çekmesin diye masaüstüyle hafifçe karışır
+HOVER_OPACITY = 1.0
+TAPER = 0.26  # girintinin uçlarının kenarda sönme uzunluğu (boya oranla)
+
+
+def _alpha(color: str, alpha: float) -> QColor:
+    result = QColor(color)
+    result.setAlphaF(alpha)
+    return result
+
+
+def dent_path(width: float, height: float) -> QPainterPath:
+    """Girintinin ağzı: uçlarda sağ kenara iner, ortada `width` kadar içeri girer."""
+    path = QPainterPath(QPointF(width, 0))
+    middle = height / 2
+    taper = height * TAPER
+    path.cubicTo(width, taper, 0, taper, 0, middle)
+    path.cubicTo(0, height - taper, width, height - taper, width, height)
+    return path
 
 
 class _HandleWidget(QWidget):
@@ -21,7 +53,6 @@ class _HandleWidget(QWidget):
         super().__init__()
         self._owner = owner
         self._hover = False
-        self._color = QColor(DARK.accent)
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -31,10 +62,6 @@ class _HandleWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-    def set_color(self, color: QColor) -> None:
-        self._color = color
-        self.update()
 
     def enterEvent(self, event: QEvent) -> None:
         self._hover = True
@@ -51,15 +78,26 @@ class _HandleWidget(QWidget):
             self._owner.activated.emit(self._owner.screen)
 
     def paintEvent(self, event) -> None:
+        width, height = float(self.width()), float(self.height())
+        dent = dent_path(width, height)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        color = QColor(self._color)
-        color.setAlphaF(0.9 if self._hover else 0.45)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(color)
-        radius = self.width()
-        # Sağ kenara yapışık görünsün diye pill genişletilip sağ yarısı kırpılır.
-        painter.drawRoundedRect(QRectF(0, 0, self.width() + radius, self.height()), radius, radius)
+        painter.setOpacity(HOVER_OPACITY if self._hover else IDLE_OPACITY)
+
+        # Duvar kenardan içeri doğru koyulaşır: dip, ekranın içinde kalan taraftır.
+        wall = QLinearGradient(QPointF(0, 0), QPointF(width, 0))
+        wall.setColorAt(0.0, QColor(HOLE.body))
+        wall.setColorAt(1.0, QColor(HOLE.deep))
+        painter.fillPath(dent, wall)
+
+        # Girinti ışığı yukarıdan alır: üst ağız gölgede, alt ağız hafif aydınlık kalır.
+        lip = QLinearGradient(QPointF(0, 0), QPointF(0, height))
+        lip.setColorAt(0.0, _alpha(HOLE.void, 0.9))
+        lip.setColorAt(0.5, _alpha(HOLE.void, 0.5))
+        lip.setColorAt(1.0, QColor(HOLE.rim))
+        painter.setPen(QPen(lip, 1))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(dent)
 
 
 class HandleTrigger(Trigger):
@@ -75,7 +113,6 @@ class HandleTrigger(Trigger):
         self._thickness = settings.handle_thickness
         self._length = settings.handle_length
         self._position = settings.handle_position
-        self._widget.set_color(QColor(look.theme.accent))
         if self.screen is not None and self._widget.isVisible():
             self._place(self.screen)
 
@@ -87,14 +124,19 @@ class HandleTrigger(Trigger):
     def hide(self) -> None:
         self._widget.hide()
 
-    def _place(self, screen: QScreen) -> None:
+    def anchor_on(self, screen: QScreen) -> QPoint:
+        rect = self._rect_on(screen)
+        return QPoint(rect.x() + rect.width(), rect.y() + rect.height() // 2)
+
+    def _rect_on(self, screen: QScreen) -> QRect:
         work = screen.availableGeometry()
         full = screen.geometry()
         length = min(self._length, work.height())
         y = work.top() + round((work.height() - length) * self._position)
-        self._widget.setGeometry(
-            full.x() + full.width() - self._thickness, y, self._thickness, length
-        )
+        return QRect(full.x() + full.width() - self._thickness, y, self._thickness, length)
+
+    def _place(self, screen: QScreen) -> None:
+        self._widget.setGeometry(self._rect_on(screen))
 
     def shutdown(self) -> None:
         self._widget.hide()

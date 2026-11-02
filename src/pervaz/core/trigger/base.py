@@ -7,7 +7,7 @@ Panel ve denetleyici yalnızca bu arayüzü bilir.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QPoint, Signal
 from PySide6.QtGui import QScreen
 
 from pervaz.core.settings import Settings
@@ -27,6 +27,10 @@ class Trigger(QObject):
         raise NotImplementedError
 
     def hide(self) -> None:
+        raise NotImplementedError
+
+    def anchor_on(self, screen: QScreen) -> QPoint:
+        """Panelin verilen ekranda çıkıp gireceği nokta (ekran koordinatı)."""
         raise NotImplementedError
 
     def shutdown(self) -> None:
