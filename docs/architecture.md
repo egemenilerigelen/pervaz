@@ -46,7 +46,7 @@ src/pervaz/
 ├── app/               # bootstrap.py (süreç kurulumu) · controller.py (AppController)
 ├── core/
 │   ├── cards/         # base.py (Card, CardSpec, CardContext, guarded) · host.py · manager.py
-│   ├── panel/         # window.py · blackhole.py · surface.py · header.py · auto_close.py · screens.py
+│   ├── panel/         # window.py · blackhole.py · pin_motion.py · surface.py · header.py · auto_close.py · screens.py
 │   ├── trigger/       # Trigger arayüzü ve tutamaç
 │   ├── platform/      # hotkey · mouse · single_instance · appid · uptime
 │   ├── settings.py · polling.py · tray.py · widgets.py · turkish.py
@@ -172,5 +172,5 @@ settings.json -> SettingsStore.load -> Settings (doğrulanmış) -> look_from_se
 - Panel, kart ve arka plan çizimleri bir kez çizilip önbelleğe alınır.
 - Kara delik efekti yalnızca animasyon boyunca çalışır: panelin bir görüntüsü alınır, ağ üzerinde
   bükülür (kare başına ~10 ms) ve bitince görüntü bırakılır. OpenGL ya da yeni bir Qt modülü
-  gerektirmez.
+  gerektirmez. Raptiye efekti de aynı yolla, panel görüntüsünü raptiye çevresinde döndürür.
 - Exe boyutu ~28 MB hedeflenir; neden ve nasıl için bkz. [geliştirme](development.md#exe-ve-boyut-bütçesi).

@@ -52,8 +52,9 @@ Kurulum yapmak istemezsen hazır `Pervaz.exe`'yi, GitHub'daki ilgili CI çalış
   kısayolu ve tepsi ikonu da paneli açıp kapatır.
 - **Kapatmak:** panelin dışına tıkla ya da fareyi panelden 3 sn uzak tut. Kısayol ve tepsi
   ikonu her zaman kapatır.
-- **Sabitlemek:** üst satırdaki iğne düğmesi paneli açık tutar; dışarı tıklama ve fare
-  ayrılması kapatmaz. Durum hatırlanır.
+- **Sabitlemek:** üst satırdaki raptiye düğmesi paneli açık tutar; dışarı tıklama ve fare
+  ayrılması kapatmaz. Raptiye panele saplanır, panel o noktadan asılı gibi sallanıp durulur.
+  Durum hatırlanır.
 - **Katlamak:** kart başlığına tıkla; durum hatırlanır.
 - **Tepsi:** simgeye tıklamak paneli açıp kapatır; sağ tık menüsünde "Paneli aç / kapat",
   "Açık tut" ve "Çıkış" vardır.

@@ -29,8 +29,8 @@ yüzünden uygulama açılmaz hale gelmez:
 | `close_on_outside_click` | `true`/`false` | | `true` | Panelin dışına tıklayınca kapanır |
 | `leave_close_seconds` | sayı | 0–60 | `3.0` | Fare panelden ayrıldıktan bu kadar saniye sonra kapanır; `0` = kapalı |
 | `pinned` | `true`/`false` | | `false` | Sabitlenmiş panel dışarı tıklama ve fare ayrılmasıyla kapanmaz; durum hatırlanır |
-| `animations` | `true`/`false` | | `true` | Panelin kara delik efekti ve kartların katlanması animasyonlu olur; `false` iken panel anında açılıp kapanır |
-| `animation_ms` | tam sayı | 50–1000 | `220` | Animasyonların temel süresi. Kara delik efekti okunabilsin diye bu değerin iki katı sürer (varsayılan 440 ms) |
+| `animations` | `true`/`false` | | `true` | Panelin kara delik ve raptiye efektleri ile kartların katlanması animasyonlu olur; `false` iken panel anında açılıp kapanır |
+| `animation_ms` | tam sayı | 50–1000 | `220` | Animasyonların temel süresi. Efektler okunabilsin diye kara delik bu değerin iki katı (varsayılan 440 ms), raptiye 3,5 katı (770 ms) sürer |
 | `panel_width` | tam sayı | 240–640 | `280` | Panelin genişliği (mantıksal px). Yazı ölçeği 1'den büyükse panel orantılı genişler |
 
 ### Kısayol ve ekran
