@@ -33,6 +33,20 @@ WEATHER_TINTS: dict[str, tuple[str, str]] = {
 COVERLESS_TONES = ("#b8b330", "#5aa63a")
 
 
+@dataclass(frozen=True)
+class HoleTones:
+    """Tutamaç ve kara delik tonları: masaüstünün üstünde durur, temaya göre kaymaz."""
+
+    void: str = "#060302"  # olay ufkunun içi
+    deep: str = "#1c0f08"  # girintinin dibi
+    body: str = "#3b2416"  # girintinin duvarı
+    rim: str = "#5a3a26"  # ışığı yakalayan alt ağız
+    glow: str = "#8a5c38"  # ufkun etrafındaki sönük ışıma
+
+
+HOLE = HoleTones()
+
+
 def parse_hex(color: str) -> tuple[int, int, int]:
     return int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
 
