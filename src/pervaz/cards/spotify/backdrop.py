@@ -29,6 +29,7 @@ from PySide6.QtWidgets import QFrame, QWidget
 
 from pervaz.cards.spotify.palette import DEFAULT, Palette
 from pervaz.theme import Look
+from pervaz.theme.tokens import BLACK, WHITE
 
 MAX_ALPHA = 0.09  # renk katmanlarının üst sınırı (testle korunur)
 DOT_ALPHA = 0.16  # nokta deseninin saydamlığı
@@ -65,7 +66,7 @@ def _blob(p: QPainter, cx: float, cy: float, rx: float, ry: float, color: QColor
 
 def _shade(dark: bool) -> str:
     """Panelin tanesiyle aynı yön: metnin tersi."""
-    return "#000000" if dark else "#ffffff"
+    return BLACK if dark else WHITE
 
 
 @lru_cache(maxsize=4)
@@ -145,7 +146,7 @@ def render_backdrop(
 
     # 4) Cam yansıması: köşegen, çok yumuşak bir açık bant.
     sheen = QLinearGradient(QPointF(w * 0.1, 0), QPointF(w * 0.9, h))
-    glint = QColor("#ffffff")
+    glint = QColor(WHITE)
     glint.setAlphaF(0.02 if dark else 0.06)
     clear = QColor(glint)
     clear.setAlpha(0)

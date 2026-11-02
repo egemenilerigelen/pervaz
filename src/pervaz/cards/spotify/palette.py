@@ -26,7 +26,7 @@ from PySide6.QtGui import QImage
 
 from pervaz.cards.spotify.widgets import art_rect
 from pervaz.theme import Theme
-from pervaz.theme.tokens import blend, contrast_ratio, parse_hex
+from pervaz.theme.tokens import COVERLESS_TONES, blend, contrast_ratio, parse_hex
 
 SAMPLE = 32  # resim bu boyuta küçültülür
 MIN_CHROMA = 0.03  # bundan soluk piksel renksiz sayılır, oy kullanmaz
@@ -52,8 +52,7 @@ ACCENT_CHROMA = 0.15
 MIN_CONTRAST = 3.0  # çubuk gibi çizgisel öğeler için WCAG alt sınırı
 GLOW_PEAK = 0.20  # çubuğun altındaki ışımanın en yoğun hâli (kontrol bunun üstünde yapılır)
 
-# Kapak yokken: referanstaki zeytin-yeşil tonları.
-LIME, GREEN = "#b8b330", "#5aa63a"
+LIME, GREEN = COVERLESS_TONES  # kapak yokken
 
 
 @dataclass(frozen=True)
