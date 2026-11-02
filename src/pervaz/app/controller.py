@@ -88,7 +88,7 @@ class AppController(QObject):
         self.trigger.activated.connect(self.open_panel)
         self.hotkeys.triggered.connect(lambda: self.toggle_panel(self.settings.hotkey_screen))
         self.panel.pin_clicked.connect(lambda: self.set_pinned(not self.settings.pinned))
-        self.panel.hidden.connect(self._on_panel_hidden)
+        self.panel.shown.connect(self.trigger.hide)
         self.auto_close.close_requested.connect(self.close_panel)
         self.manager.collapsed_changed.connect(self._on_collapsed)
         self.manager.config_changed.connect(self._on_card_config)
@@ -139,9 +139,10 @@ class AppController(QObject):
         if self.panel.is_open:
             return
         self._hover_timer.stop()
-        self.trigger.hide()
-        self.panel.open_on(screen)
+        # Kartlar önce uyanır: panelin efekte giren görüntüsü güncel olsun. Tutamaç, panel
+        # içinden çıkıp yerine oturana kadar görünür kalır.
         self.manager.show_all()
+        self.panel.open_on(screen, self.trigger.anchor_on(screen))
         self.auto_close.start()
 
     def close_panel(self, force: bool = False) -> None:
@@ -150,6 +151,7 @@ class AppController(QObject):
             return
         self._hover_timer.stop()
         self.auto_close.stop()
+        self.trigger.show_on(resolve_screen(self.settings.trigger_screen))  # panel içine girecek
         self.panel.close_panel()
         self.manager.hide_all()
 
@@ -158,11 +160,6 @@ class AppController(QObject):
             self.close_panel(force=True)
         else:
             self.open_panel(resolve_screen(screen_spec))
-
-    @Slot()
-    def _on_panel_hidden(self) -> None:
-        if not self.panel.is_open:
-            self.trigger.show_on(resolve_screen(self.settings.trigger_screen))
 
     @Slot(QScreen, bool)
     def _on_trigger_hovered(self, screen: QScreen, entered: bool) -> None:

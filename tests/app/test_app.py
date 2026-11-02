@@ -94,6 +94,45 @@ def test_panel_never_leaves_the_work_area(make_controller, screen):
     assert rect.height() == work.height()
 
 
+def test_handle_gives_way_to_the_open_panel_and_returns_when_it_closes(make_controller, screen):
+    c = make_controller()
+    c.start()
+    assert c.trigger._widget.isVisible()
+    c.open_panel(screen)
+    assert not c.trigger._widget.isVisible()
+    c.close_panel()
+    assert c.trigger._widget.isVisible()
+
+
+def test_handle_stays_visible_while_the_panel_goes_through_it(make_controller, screen, qtbot):
+    c = make_controller()
+    c.panel._settings = c.settings.with_changes(animations=True, animation_ms=50)
+    c.start()
+    with qtbot.waitSignal(c.panel.shown, timeout=3000):
+        c.open_panel(screen)
+        assert c.trigger._widget.isVisible()  # panel tutamaçtan çıkıyor
+    assert not c.trigger._widget.isVisible()
+    with qtbot.waitSignal(c.panel.hidden, timeout=3000):
+        c.close_panel()
+        assert c.trigger._widget.isVisible()  # panel tutamaca giriyor
+    assert c.trigger._widget.isVisible()
+
+
+def test_panel_comes_out_of_the_handle(make_controller, screen):
+    c = make_controller()
+    c.open_panel(screen)
+    assert c.panel._anchor == c.trigger.anchor_on(screen)
+
+
+def test_cards_wake_before_the_panel_is_captured(make_controller, screen, monkeypatch):
+    c = make_controller()
+    calls = []
+    monkeypatch.setattr(c.manager, "show_all", lambda: calls.append("kartlar"))
+    monkeypatch.setattr(c.panel, "open_on", lambda *args: calls.append("panel"))
+    c.open_panel(screen)
+    assert calls == ["kartlar", "panel"]
+
+
 def test_pinned_panel_ignores_soft_close_but_not_forced(make_controller, screen):
     c = make_controller(pinned=True)
     c.start()
