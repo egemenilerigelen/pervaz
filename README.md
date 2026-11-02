@@ -1,5 +1,10 @@
 # Pervaz
 
+[![CI](https://github.com/egemenilerigelen/pervaz/actions/workflows/ci.yml/badge.svg)](https://github.com/egemenilerigelen/pervaz/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%20|%203.12-blue)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+[![Lisans: MIT](https://img.shields.io/badge/lisans-MIT-green)](LICENSE)
+
 Ekranın sağ kenarından kayarak açılan, modüler bir Windows durum paneli. Her bilgi
 (hava durumu, sistem, piyasa, müzik...) bağımsız bir **kart**tır; kartlar açılıp
 kapanabilir, katlanabilir ve sıralanabilir.
@@ -134,6 +139,18 @@ src/pervaz/
 
 Katmanlar, yaşam döngüleri ve veri akışı için [mimari dokümanı](docs/architecture.md); alınan
 kararlar için [ADR'ler](docs/decisions).
+
+### Mühendislik tercihleri
+
+- **Mimari kod olarak denetlenir:** katman yönleri, döngüsel import ve kart kaydı
+  `tests/test_architecture.py` ile her çalışmada doğrulanır; kural ihlali derlemeyi düşürür.
+- **Kararlar yazılıdır:** her önemli tercih bir [ADR](docs/decisions)'dir (katmanlı mimari, bağımsız
+  kartlar, hesapsız veri, pano gizliliği, kart anatomisi).
+- **Ağ, disk ve sistem testte yoktur:** bağımlılıklar `Protocol` ile kurucudan gelir; testler
+  ekransız Qt ile ve sabit HTTP yanıtlarıyla çalışır.
+- **Hata dayanıklı:** bozuk ayar sessizce varsayılana döner, kaynak çökünce son veri gösterilir.
+- **Boşta ~%0 işlemci:** panel kapalıyken zamanlayıcı yoktur; ağır iş arayüz iş parçacığında yapılmaz.
+- **CI:** Windows üzerinde Python 3.11/3.12 matrisinde lint, biçim, test ve `Pervaz.exe` derlemesi.
 
 ## Yeni kart eklemek
 
