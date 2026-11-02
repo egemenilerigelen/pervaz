@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QPointF, Qt, QTimer, Signal
 from PySide6.QtWidgets import QHBoxLayout, QToolButton, QVBoxLayout, QWidget
 
+from pervaz.core.panel.pin_motion import PIN_GLYPH, PINNED_GLYPH
 from pervaz.core.platform.uptime import uptime_seconds
 from pervaz.core.turkish import format_date
 from pervaz.core.widgets import make_label, repolish
 from pervaz.theme import Look
-
-PIN_GLYPH = ""
 
 
 def format_uptime(seconds: int) -> str:
@@ -75,8 +74,18 @@ class HeaderBar(QWidget):
 
     def set_pinned(self, pinned: bool) -> None:
         self._pin.setProperty("active", pinned)
+        self._pin.setText(PINNED_GLYPH if pinned else PIN_GLYPH)
         self._pin.setToolTip("Sabitlemeyi kaldır" if pinned else "Paneli açık tut")
         repolish(self._pin)
+
+    def set_pin_ghost(self, ghost: bool) -> None:
+        """Düğme yerini korur ama çizilmez: raptiye efektte ayrıca çizilirken ikisi görünmesin."""
+        self._pin.setProperty("ghost", ghost)
+        repolish(self._pin)
+
+    def pin_center(self, ancestor: QWidget) -> QPointF:
+        """Raptiye düğmesinin merkezi, `ancestor` widget'ının koordinatlarında."""
+        return QPointF(self._pin.mapTo(ancestor, self._pin.rect().center()))
 
     def start(self) -> None:
         self._tick()

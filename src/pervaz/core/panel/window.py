@@ -18,6 +18,7 @@ from PySide6.QtCore import (
     QPointF,
     QPropertyAnimation,
     QRect,
+    QRectF,
     QSize,
     Qt,
     Signal,
@@ -28,6 +29,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from pervaz.core.cards.host import CardHost
 from pervaz.core.panel.blackhole import BlackHoleWarp
 from pervaz.core.panel.header import HeaderBar
+from pervaz.core.panel.pin_motion import PinMotion
 from pervaz.core.panel.surface import PanelSurface
 from pervaz.core.settings import Settings
 from pervaz.core.widgets import AutoHideScrollArea
@@ -36,6 +38,7 @@ from pervaz.theme import Look
 PANEL_MARGIN = 2  # kartın ekran kenarlarından uzaklığı (mantıksal px, yoğunlukla ölçeklenir)
 HORIZON_RADIUS = 30  # olay ufkunun en geniş yarıçapı (mantıksal px, yoğunlukla ölçeklenir)
 WARP_TIME_SCALE = 2  # efekt okunsun diye süre `animation_ms` değerinin bu katıdır
+PIN_TIME_SCALE = 3.5  # raptiyenin saplanıp panelin durulması için aynı şekilde
 
 
 class PanelWindow(QWidget):
@@ -60,6 +63,10 @@ class PanelWindow(QWidget):
         self._open = False
         self._pull = 1.0  # 0 = panel yerinde, 1 = tamamen delikte
         self._warp: BlackHoleWarp | None = None
+        self._pinned = False
+        self._pin_time = 0.0  # raptiye efektinin ilerlemesi: 0 başlangıç, 1 bitiş
+        self._pin_motion: PinMotion | None = None
+        self._screen_rect = QRect()
         self._width = settings.panel_width
         self._height = 600
         self._margin = look.metrics.sp(PANEL_MARGIN)
@@ -88,6 +95,10 @@ class PanelWindow(QWidget):
 
         self._anim = QPropertyAnimation(self, b"pull", self)
         self._anim.finished.connect(self._on_anim_finished)
+        self._pin_anim = QPropertyAnimation(self, b"pin_time", self)
+        self._pin_anim.setStartValue(0.0)
+        self._pin_anim.setEndValue(1.0)
+        self._pin_anim.finished.connect(self._settle)
 
         self.setStyleSheet(look.stylesheet)
 
@@ -102,9 +113,20 @@ class PanelWindow(QWidget):
 
     pull = QtProperty(float, _get_pull, _set_pull)
 
+    def _get_pin_time(self) -> float:
+        return self._pin_time
+
+    def _set_pin_time(self, value: float) -> None:
+        self._pin_time = value
+        self.update()
+
+    pin_time = QtProperty(float, _get_pin_time, _set_pin_time)
+
     def paintEvent(self, event) -> None:
         if self._warp is not None:
             self._warp.paint(QPainter(self), self._pull)
+        elif self._pin_motion is not None:
+            self._pin_motion.paint(QPainter(self), self._pin_time)
 
     # --- Dış arayüz ---------------------------------------------------------
 
@@ -130,7 +152,14 @@ class PanelWindow(QWidget):
         self._column.insertWidget(self._column.count() - 1, host)
 
     def set_pinned(self, pinned: bool) -> None:
+        """Sabitliği değiştirir; panel açık ve duruyorsa raptiye efektiyle gösterir."""
+        changed = pinned != self._pinned
+        self._pinned = pinned
+        self._stop_pin_motion()
         self.header.set_pinned(pinned)
+        visible = self._open and self.isVisible() and self._warp is None
+        if changed and visible and self._settings.animations:
+            self._begin_pin_motion(pinned)
 
     def set_look(self, look: Look) -> None:
         self._look = look
@@ -139,7 +168,9 @@ class PanelWindow(QWidget):
 
     def open_on(self, screen: QScreen, anchor: QPoint | None = None) -> None:
         """Paneli `screen` üzerinde açar; `anchor` verilmezse sağ kenarın ortasından çıkar."""
+        self._stop_pin_motion()
         work = screen.availableGeometry()
+        self._screen_rect = screen.geometry()
         # Yazı ölçeği büyüdükçe panel de orantılı genişler.
         self._width = round(self._settings.panel_width * max(1.0, self._look.metrics.font))
         self._margin = self._look.metrics.sp(PANEL_MARGIN)
@@ -168,6 +199,7 @@ class PanelWindow(QWidget):
     def close_panel(self) -> None:
         if not self._open:
             return
+        self._stop_pin_motion()
         self._open = False
         self.header.stop()
         if self._settings.animations and self.isVisible():
@@ -197,6 +229,32 @@ class PanelWindow(QWidget):
         rect.setRight(max(rect.right(), self._anchor.x() - 1))
         self.setGeometry(rect)
 
+    def _begin_pin_motion(self, pinning: bool) -> None:
+        """Panel raptiye çevresinde döneceği için pencere sağa ve aşağı ekran sonuna büyür."""
+        self.header.set_pin_ghost(True)
+        image = self._snapshot()
+        self.header.set_pin_ghost(False)
+        self._pin_motion = PinMotion(
+            image,
+            QRectF(0, 0, self._width, self._height),
+            self.header.pin_center(self._surface),
+            pinning,
+            self._look,
+        )
+        self._surface.move(-2 * self._width, 0)
+        rect = self._panel_rect()
+        rect.setRight(max(rect.right(), self._screen_rect.right()))
+        rect.setBottom(max(rect.bottom(), self._screen_rect.bottom()))
+        self.setGeometry(rect)
+        self._pin_time = 0.0
+        self._pin_anim.setDuration(round(self._settings.animation_ms * PIN_TIME_SCALE))
+        self._pin_anim.start()
+
+    def _stop_pin_motion(self) -> None:
+        if self._pin_motion is not None:
+            self._pin_anim.stop()
+            self._settle()
+
     def _snapshot(self) -> QImage:
         """Aygıt pikseli cinsinden yüzey görüntüsü.
 
@@ -214,6 +272,7 @@ class PanelWindow(QWidget):
     def _settle(self) -> None:
         """Gerçek yüzeyi yerine koyar, pencereyi kart boyutuna döndürür."""
         self._warp = None
+        self._pin_motion = None
         self._surface.move(0, 0)
         self.setGeometry(self._panel_rect())
         self._pull = 0.0 if self._open else 1.0

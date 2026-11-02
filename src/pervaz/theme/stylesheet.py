@@ -83,6 +83,8 @@ QToolButton[role="output"]:hover {{ background: {shade}; color: {t.text}; }}
 QToolButton[role="icon"][active="true"] {{ color: {t.accent}; }}
 QToolButton[role="icon"]:disabled,
 QToolButton[role="output"]:disabled {{ color: {rgba(t.text_dim, 0.35)}; }}
+QToolButton[role="icon"][ghost="true"],
+QToolButton[role="icon"][ghost="true"]:hover {{ background: transparent; color: transparent; }}
 QToolButton[role="copy"] {{
     background: transparent;
     border: none;
