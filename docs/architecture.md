@@ -46,7 +46,7 @@ src/pervaz/
 ├── app/               # bootstrap.py (süreç kurulumu) · controller.py (AppController)
 ├── core/
 │   ├── cards/         # base.py (Card, CardSpec, CardContext, guarded) · host.py · manager.py
-│   ├── panel/         # window.py · surface.py · header.py · auto_close.py · screens.py
+│   ├── panel/         # window.py · blackhole.py · surface.py · header.py · auto_close.py · screens.py
 │   ├── trigger/       # Trigger arayüzü ve tutamaç
 │   ├── platform/      # hotkey · mouse · single_instance · appid · uptime
 │   ├── settings.py · polling.py · tray.py · widgets.py · turkish.py
@@ -83,7 +83,8 @@ sequenceDiagram
 ```
 
 `AppController` karar vermez, bağlar: tutamaç, kısayol ve tepsi aynı `open_panel`/`toggle_panel`
-metotlarına gider. Panel kapanınca tutamaç yeniden görünür.
+metotlarına gider. Panel kara delik efektiyle tutamaçtan çıkıp oraya girdiği için tutamaç
+animasyon boyunca görünür kalır: panel yerine oturunca gizlenir, kapanış başlarken geri gelir.
 
 ## Kart yaşam döngüsü
 
@@ -169,4 +170,7 @@ settings.json -> SettingsStore.load -> Settings (doğrulanmış) -> look_from_se
   panel açılınca veri hazır olsun diye) ve pano kartı (olay tabanlı, yoklama yok).
 - Ağır iş (ağ, sistem okuma, Windows API) ana iş parçacığında yapılmaz.
 - Panel, kart ve arka plan çizimleri bir kez çizilip önbelleğe alınır.
+- Kara delik efekti yalnızca animasyon boyunca çalışır: panelin bir görüntüsü alınır, ağ üzerinde
+  bükülür (kare başına ~10 ms) ve bitince görüntü bırakılır. OpenGL ya da yeni bir Qt modülü
+  gerektirmez.
 - Exe boyutu ~28 MB hedeflenir; neden ve nasıl için bkz. [geliştirme](development.md#exe-ve-boyut-bütçesi).

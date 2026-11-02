@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 [![Lisans: MIT](https://img.shields.io/badge/lisans-MIT-green)](LICENSE)
 
-Ekranın sağ kenarından kayarak açılan, modüler bir Windows durum paneli. Her bilgi
+Ekranın sağ kenarındaki tutamaçtan kara delik efektiyle açılan, modüler bir Windows durum paneli. Her bilgi
 (hava durumu, sistem, piyasa, müzik...) bağımsız bir **kart**tır; kartlar açılıp
 kapanabilir, katlanabilir ve sıralanabilir.
 
@@ -13,7 +13,7 @@ kapanabilir, katlanabilir ve sıralanabilir.
   <img src="docs/images/panel.png" alt="Pervaz paneli: saat, hava durumu, finans, telemetri, Spotify, pano ve GitHub kartları" width="300">
 </p>
 
-> Proje geliştirme aşamasında (sürüm 0.2.0). Şu an panel iskeleti, tema katmanı, üst bilgi satırı ve
+> Proje geliştirme aşamasında (sürüm 0.3.0). Şu an panel iskeleti, tema katmanı, üst bilgi satırı ve
 > **hava durumu**, **finans** (döviz, altın), **telemetri**, **Spotify**, **pano** ve **GitHub**
 > kartları çalışıyor. Takvim ve pil/ses kartları sırayla eklenecek.
 
@@ -47,8 +47,9 @@ Kurulum yapmak istemezsen hazır `Pervaz.exe`'yi, GitHub'daki ilgili CI çalış
 
 ## Kullanım
 
-- **Açmak:** sağ kenardaki ince tutamacın üzerine gel (varsayılan 200 ms bekler) ya da
-  tıkla. `Win+Alt+P` kısayolu ve tepsi ikonu da paneli açıp kapatır.
+- **Açmak:** sağ kenardaki koyu kahve tutamacın üzerine gel (varsayılan 200 ms bekler) ya da
+  tıkla. Panel tutamaçtan sarmal çizerek çıkar, kapanırken yine oraya emilir. `Win+Alt+P`
+  kısayolu ve tepsi ikonu da paneli açıp kapatır.
 - **Kapatmak:** panelin dışına tıkla ya da fareyi panelden 3 sn uzak tut. Kısayol ve tepsi
   ikonu her zaman kapatır.
 - **Sabitlemek:** üst satırdaki iğne düğmesi paneli açık tutar; dışarı tıklama ve fare

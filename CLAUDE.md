@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Pervaz: ekranın kenarından kayarak açılan, kartlardan oluşan modüler bir **Windows** paneli
+Pervaz: ekranın kenarındaki tutamaçtan açılan, kartlardan oluşan modüler bir **Windows** paneli
 (PySide6). Her bilgi (hava, finans, telemetri, Spotify, pano, GitHub) bağımsız bir kart paketidir.
 Yalnızca Windows'ta çalışır. Kullanıcı Türkçe konuşur: yanıtlar, arayüz metinleri, docstring'ler
 ve yorumlar Türkçe olur.

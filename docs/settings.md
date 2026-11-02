@@ -29,8 +29,8 @@ yüzünden uygulama açılmaz hale gelmez:
 | `close_on_outside_click` | `true`/`false` | | `true` | Panelin dışına tıklayınca kapanır |
 | `leave_close_seconds` | sayı | 0–60 | `3.0` | Fare panelden ayrıldıktan bu kadar saniye sonra kapanır; `0` = kapalı |
 | `pinned` | `true`/`false` | | `false` | Sabitlenmiş panel dışarı tıklama ve fare ayrılmasıyla kapanmaz; durum hatırlanır |
-| `animations` | `true`/`false` | | `true` | Panelin kayması ve kartların katlanması animasyonlu olur |
-| `animation_ms` | tam sayı | 50–1000 | `220` | Panelin kayma süresi |
+| `animations` | `true`/`false` | | `true` | Panelin kara delik efekti ve kartların katlanması animasyonlu olur; `false` iken panel anında açılıp kapanır |
+| `animation_ms` | tam sayı | 50–1000 | `220` | Animasyonların temel süresi. Kara delik efekti okunabilsin diye bu değerin iki katı sürer (varsayılan 440 ms) |
 | `panel_width` | tam sayı | 240–640 | `280` | Panelin genişliği (mantıksal px). Yazı ölçeği 1'den büyükse panel orantılı genişler |
 
 ### Kısayol ve ekran
@@ -54,9 +54,12 @@ tutamaçtan ya da tepsi simgesinden açabilirsin.
 | Alan | Tür | Aralık | Varsayılan | Anlamı |
 | --- | --- | --- | --- | --- |
 | `trigger_kind` | metin | `handle` | `handle` | Tetikleyici türü. Şimdilik yalnızca tutamaç vardır; tanınmayan değer tutamaç olur |
-| `handle_thickness` | tam sayı | 2–24 | `6` | Tutamacın kalınlığı (px) |
-| `handle_length` | tam sayı | 24–600 | `96` | Tutamacın uzunluğu (px) |
+| `handle_thickness` | tam sayı | 2–24 | `6` | Tutamacın ekranın içine girdiği derinlik (px) |
+| `handle_length` | tam sayı | 24–600 | `96` | Tutamacın uzunluğu (px); uçları kenarda sönerek biter |
 | `handle_position` | sayı | 0–1 | `0.5` | Tutamacın dikey konumu: 0 üst, 1 alt |
+
+Tutamacın koyu kahve tonları `theme/tokens.py` içindeki `HOLE`'dan gelir; masaüstünün üstünde
+durduğu için tema ve `accent` ayarına göre değişmez.
 
 ### Görünüm
 
